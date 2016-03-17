@@ -107,3 +107,77 @@
 ;; to (p) but if it is normalized then it will terminate.
 ;; (test 0 (p)) => if (= 0 0) 0 (p) => 0. No evaluation of (p)
 ;; Laziness is great :)
+
+(define (average x y)
+  (/ (+ x y) 2))
+
+(define (improve guess x)
+  (average guess (/ x guess)))
+
+(define (good-enough? guess x)
+  (< (abs (- (square guess) x)) 0.001))
+
+(define (improved-good-enough? guess x)
+  (< (abs (- guess (improve guess x))) 0.001))
+
+(define (sqrt-iter guess x)
+  (if (improved-good-enough? guess x)
+      guess
+      (sqrt-iter (improve guess x) x)))
+
+(define (sqrt n)
+  (sqrt-iter 1.0 n))
+
+;; The problem with defintion is, our evaluation order is applicative
+;; so all three will evaluated. Try (new-if #t 1 (/ 1 0))
+(define (new-if predicate then-clause else-clause)
+  (cond (predicate then-clause)
+        (else else-clause)))
+
+;; Because new-if is evaluating both branches, the complexity will
+;; grow exponentially with each recursive call (power of 2).
+;; try (sqrt-iter-bad 1 982349247982472947294729847).
+;; This input is also not working for sqrt with good-enough.
+;; Improve good-enough? to improved-good-enough? (Rate of change of
+;; function dy/dx). Problem 1.7
+(define (sqrt-iter-bad guess x)
+  (new-if (good-enough? guess x)
+          guess
+          (sqrt-iter (improve guess x) x)))
+
+;; It can be abstracted very nicely by passing function.
+;; but try to see how verbose and stupid code I can write :)
+
+(define (good-enough-cube? guess n)
+  (< (abs (- guess (compute-next-guess guess n))) 0.0001))
+
+(define (compute-next-guess guess x)
+  (/ (+ (/ x (* guess guess)) (* 2 guess)) 3))
+
+(define (cube-root-iter guess x)
+  (if (good-enough-cube? guess x)
+      guess
+      (cube-root-iter (compute-next-guess guess x) x)))
+
+(define (cube-root n)
+  (cube-root-iter 1.0 n))
+
+;; x/y^n + (n - 1) * y / n
+(define (nth-next-guess y x n)
+  (/ (+ (/ x (expt y (- n 1)))
+        (* (- n 1) y)) n))
+
+(define (nth-good-enough? y x n)
+  (< (abs (- y (nth-next-guess y x n))) 0.0001))
+
+(define (nth-root-iter y x n)
+  (if (nth-good-enough? y x n)
+      y
+      (nth-root-iter (nth-next-guess y x n) x n)))
+
+(define (nth-root x n)
+  (nth-root-iter 1.0 x n))
+
+(nth-root 125 3)
+(nth-root 100 2)
+(nth-root 32 5)
