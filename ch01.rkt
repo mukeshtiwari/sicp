@@ -181,3 +181,95 @@
 (nth-root 125 3)
 (nth-root 100 2)
 (nth-root 32 5)
+
+(define (factorial n)
+  (if (= n 1)
+      1
+      (* n (factorial (- n 1)))))
+
+(define (factorial-iter n)
+  (define (fact-iter val acc)
+    (if (= val 1)
+        acc
+        (fact-iter (- val 1) (* acc val))))
+  (fact-iter n 1))
+
+(= (factorial 50) (factorial-iter 50))
+
+;; writing (+ a b) is throwing error
+;; (+ 4 3) => (inc (+ 3 3)) => (inc (inc (+ 2 3)))
+;; +: undefined;
+;;  cannot reference an identifier before its definition
+;;   in module: "/Users/mukeshtiwari/Programming/Code/sicp/ch01.rkt"
+;; Context:
+;;  /Users/mukeshtiwari/Programming/Code/sicp/ch01.rkt:1:1 [running body]
+(define ('+ a b)
+  (if (= a 0)
+      b
+      (inc ('+ (dec a) b))))
+
+;; => (inc (inc (inc (+ 1 3))))
+;; => (inc (inc (inc (inc (+ 0 3)))))
+;; => (inc (inc (inc (inc 3))))
+;; => (inc (inc (inc 4)))
+;; => (inc (inc 5))
+;; => (inc 6)
+;; => 6
+;; recursive process
+
+(define (++ a b)
+  (if (= a 0)
+      b
+      (++ (dec a) (inc b))))
+
+;; (+ 4 3) => (+ 3 4) => (+ 2 5) =>
+;; (+ 1 6) => (+ 0 7) => 7
+;; constant space. Iterative process
+
+(define (A x y)
+  (cond ((= y 0) 0)
+        ((= x 0) (* 2 y))
+        ((= y 1) 2)
+        (else (A (- x 1)
+                 (A x (- y 1))))))
+;; (A 1 10) => (A 0 (A 1 9)) =>
+;; (* 2 (A 1 9)) => (* 2 (A 0 (A 1 8))) =>
+;; (* 2 (* 2 (A 1 8))) => will continue till
+;; (*2 (* 2 (* 2 ....... (* 2 (A 1 1))))) =>
+;; and (A 1 1) will evaluate to 2
+
+;; (A 2 4) => (A 1 (A 2 3)) =>
+;; (A 0 (A 1 (- (A 1 (A 2 2)) 1))) =>
+;; (* 2 (A 1 (- (A 1 (A 2 2)) 1))) =>
+;; (* 2 (A 0 (A 1 (- (- (A 2 3) 1) 1))))
+;; and I can't keep track in my mind. Mind fuck. Even not tracking
+;; inside function. It will be power of two
+
+(define (ff n) (A 0 n)) ;; 2 * n
+
+(define (gg n) (A 1 n)) ;; 2 ^ n
+
+(define (hh n) (A 2 n)) ;; it is kind of tower. 2, 2 ^ 2 , 2 ^ (2 ^ 2)
+;; 2 ^ (2 ^ (2 ^ 2)) (2 ^ (2 ^ (2 ^ (2 ^ 2))))
+;; if nth power v then next wil 2 ^ (2 ^ v)
+
+(define (kk n) (* 5 n n)) ;; 5 n ^ 2
+
+(define (fib n)
+  (cond
+    ((= n 0) 0)
+    ((= n 1) 1)
+    (else
+     (+ (fib (- n 1))
+        (fib (- n 2))))))
+
+(define (fib-improved n)
+  (define (fib-iter cnt a b)
+    (cond
+      ((>= cnt n) a)
+      (else (fib-iter (+ cnt 1) b (+ a b)))))
+  (fib-iter 0 0 1))
+
+(= (fib 20) (fib-improved 20))
+
+;; Brute force solution
