@@ -272,4 +272,41 @@
 
 (= (fib 20) (fib-improved 20))
 
-;; Brute force solution
+(define (count-change amount)
+  (cc amount 5))
+
+(define (cc amount kind-of-coin)
+  (cond
+    ((= amount 0) 1)
+    ((or (< amount 0) (= kind-of-coin 0)) 0)
+    (else (+ (cc amount (- kind-of-coin 1))
+             (cc (- amount (first-denomination kind-of-coin))
+                 kind-of-coin)))))
+
+(define (first-denomination kind-of-coin)
+  (cond
+    ((= kind-of-coin 1) 1)
+    ((= kind-of-coin 2) 5)
+    ((= kind-of-coin 3) 10)
+    ((= kind-of-coin 4) 25)
+    ((= kind-of-coin 5) 50)))
+
+(define (recur-fun n)
+  (if (< n 3)
+      n
+      (+ (recur-fun (- n 1))
+         (* 2 (recur-fun (- n 2)))
+         (* 3 (recur-fun (- n 3))))))
+;; The given equation can be written in matrix form.
+;; (f(n) f(n+1) f(n+2))^T =
+;; ((1 2 3) (3 5 3) (8 9 9)) (f(n-1) f(n-2) f(n-3))^T
+;; this method can be used to compute the M^n in log n.
+
+(define (recur-fun-iter n)
+  (define (inner-iter-fun cnt a b c)
+    (cond
+      ((< cnt 0) cnt)
+      ((= cnt 0) a)
+      (else (inner-iter-fun (- cnt 1) b c
+                            (+ (* 3 a) (* 2 b) c)))))
+  (inner-iter-fun n 0 1 2))
