@@ -1,4 +1,5 @@
 #lang sicp
+(#%require math)
 
 (+ 137 349)
 (- 1000 334)
@@ -79,16 +80,16 @@
 ;; the interpreter he is faced with is using applicative-order evaluation
 ;; or normal-order evaluation. He defines the following two procedures:
 
-;; (define (p) (p))
+(define (v) (v))
 
-;; (define (test x y)
-;;   (if (= x 0)
-;;       0
-;;       y))
+(define (test x y)
+   (if (= x 0)
+       0
+       y))
 
 ;; Then he evaluates the expression
 
-;; (test 0 (p))
+;; (test 0 (v))
 
 ;; What behavior will Ben observe with an interpreter that uses
 ;; applicative-order evaluation? What behavior will he observe with
@@ -411,3 +412,71 @@
   (cadr (car (abst-function mat-mult
                             (list (list 1 0) (list 0 1))
                             (list (list 1 1) (list 1 0)) n))))
+(define (gcd a b)
+  (if (= 0 b)
+      a
+      (gcd b (remainder a b))))
+
+;; this is for applicative.Evaluate the arguments before calling
+;; (gcd 206 40) =>
+;; (if (= 0 40) 240 (gcd 40 (remainder 206 40))) =>
+;; (gcd 40 6) => (if (= 0 6) 40 (gcd 6 (remainder 40 6))) =>
+;; (gcd 6 4) => (if (= 0 4) 6 (gcd 4 (remainder 6 4))) =>
+;; (gcd 4 2) => (if (= 0 2) 4 (gcd 2 (remainder 4 2))) =>
+;; (gcd 2 0). 4 remainder calls
+
+(define (smallest-divisor n)
+  (find-divisor n 2))
+
+(define (find-divisor n div)
+  (cond
+    ((> (* div div) n) n)
+    ((= 0 (remainder n div)) div)
+    (else (find-divisor n (+ div 1)))))
+
+(define (prime? n)
+  (= n (smallest-divisor n)))
+
+;;b^n mod m
+(define (abst-function-mod f g acc b n m)
+  (cond
+    ((= n 0) (g acc m))
+    ((even? n) (abst-function-mod f g acc (g (f b b) m) (/ n 2) m))
+    (else (abst-function-mod f g (g (f acc b) m) b (- n 1) m))))
+
+(abst-function-mod * remainder 1 12 9894184719487 10)
+(define (expmod base exp m)
+  (abst-function-mod * remainder 1 base exp m))
+
+(define (fermat-test n)
+  (define (try-it a)
+    (= (expmod a n n) a))
+  (try-it (+ 1 (random-integer 2 (- n 1)))))
+
+;;now racket and scheme is mixing. The reason I am using math library
+;; because there is no random function in sicp and racket's random
+;; is throwing contract voilation
+;; ch01.rkt﻿> (fast-primes? 3131203812039807 12)
+;; random: contract violation
+;;   expected: (or/c (integer-in 1 4294967087) pseudo-random-generator?)
+;;   given: 3131203812039806
+(define (fast-primes? n times)
+  (cond
+    ((= times 0) #t)
+    ((fermat-test n) (fast-primes? n (- times 1)))
+    (else #f)))
+
+(smallest-divisor 199)
+(smallest-divisor 1999)
+(smallest-divisor 19999)
+
+(define (timed-prime-test n)
+  (newline)
+  (display n)
+  (start-prime-test n (runtime)))
+(define (start-prime-test n start-time)
+  (if (prime? n)
+      (report-prime (- (runtime) start-time))))
+(define (report-prime elapsed-time)
+  (display " *** ")
+  (display elapsed-time))
