@@ -428,11 +428,16 @@
 (define (smallest-divisor n)
   (find-divisor n 2))
 
+(define (next div)
+  (if (= div 2)
+      (+ div 1)
+      (+ div 2)))
+
 (define (find-divisor n div)
   (cond
     ((> (* div div) n) n)
     ((= 0 (remainder n div)) div)
-    (else (find-divisor n (+ div 1)))))
+    (else (find-divisor n (next div)))))
 
 (define (prime? n)
   (= n (smallest-divisor n)))
@@ -460,10 +465,10 @@
 ;; random: contract violation
 ;;   expected: (or/c (integer-in 1 4294967087) pseudo-random-generator?)
 ;;   given: 3131203812039806
-(define (fast-primes? n times)
+(define (fast-prime? n times)
   (cond
     ((= times 0) #t)
-    ((fermat-test n) (fast-primes? n (- times 1)))
+    ((fermat-test n) (fast-prime? n (- times 1)))
     (else #f)))
 
 (smallest-divisor 199)
@@ -471,12 +476,64 @@
 (smallest-divisor 19999)
 
 (define (timed-prime-test n)
+  (start-prime-test n (runtime)))
+
+(define (start-prime-test n start-time)
+  (if (fast-prime? n 10)
+      ;;(prime? n)
+      (report-prime n (- (runtime) start-time))))
+
+(define (report-prime n elapsed-time)
   (newline)
   (display n)
-  (start-prime-test n (runtime)))
-(define (start-prime-test n start-time)
-  (if (prime? n)
-      (report-prime (- (runtime) start-time))))
-(define (report-prime elapsed-time)
   (display " *** ")
   (display elapsed-time))
+
+(define (search-for-primes low high)
+  (define (odd-range lodd hodd)
+    (if (<= lodd hodd)
+        (timed-prime-test lodd))
+    (if (<= lodd hodd) (odd-range (+ lodd 2) hodd)))
+  (odd-range (if (odd? low) low (+ low 1))
+             (if (odd? high) high (- high 1))))
+
+
+
+(search-for-primes 1000 1019)
+(search-for-primes 10000 10037)
+(search-for-primes 100000 100043)
+(search-for-primes 1000000 1000037)
+
+;; (define (expmod base exp m)
+;;   (remainder (fast-expt base exp) m))
+;; Certainly not because number will grow
+;; exponentially and will be out of computer
+;; memory
+
+;; (define (expmod base exp m)
+;;   (cond ((= exp 0) 1)
+;;         ((even? exp)
+;;          (remainder (* (expmod base (/ exp 2) m)
+;;                        (expmod base (/ exp 2) m))
+;;                     m))
+;;         (else
+;;          (remainder (* base (expmod base (- exp 1) m))
+;;                     m))))
+
+;; (define (double x) (+ x x))
+;; Because it is not saving the intermediate result and instead
+;; it is calling again. Generating tree when number is even
+;; Also one point to note that in Scheme the evaluation is
+;; applicative so double (expmod base (/ exp 2) m) is called
+;; it is completely evaluated. Had the evaluation been
+;; normal, it would have no affect by calling double.
+(define (charmicheal-number n)
+  (define (inner-charmicheal a n)
+    (if (= a n)
+        #t
+        (if (= (expmod a n n) a)
+            (inner-charmicheal (+ a 1) n)
+            false)))
+  (inner-charmicheal 1 n))
+
+(map charmicheal-number (list 561 1105 1729 2465 2821 6601))
