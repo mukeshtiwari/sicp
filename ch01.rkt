@@ -330,6 +330,7 @@
   (if (not (> (abs angle) 0.1))
       angle
       (p (sine (/ angle 3.0)))))
+
 ;; How many times is the procedure p applied when (sine 12.15) is evaluated?
 ;; (sine 12.15) => (p (sine 4.05)) => (p (p (sine 1.34999)))
 ;; (p (p (p (sine 0.449999)))) => (p (p ( p (p (sine 0.15)))))
@@ -342,8 +343,8 @@
 ;; we divide the input by 3. n => n / 3 => n / 9 === n / 3 ^ k
 ;; n / 3 ^ k = Constant => 3^k = n / Constant => k = log (n / Constant)
 ;; base 3. The process is recursive so it takes same amount of space also.
-
 ;; recursive process space O(n) and time O(n)
+
 (define (expt-naive b n)
   (if (= 0 n)
       1
@@ -440,7 +441,9 @@
     (else (find-divisor n (next div)))))
 
 (define (prime? n)
-  (= n (smallest-divisor n)))
+  (if (<= n 1)
+      #f
+      (= n (smallest-divisor n))))
 
 ;;b^n mod m
 (define (abst-function-mod f g acc b n m)
@@ -450,6 +453,7 @@
     (else (abst-function-mod f g (g (f acc b) m) b (- n 1) m))))
 
 (abst-function-mod * remainder 1 12 9894184719487 10)
+
 (define (expmod base exp m)
   (abst-function-mod * remainder 1 base exp m))
 
@@ -465,6 +469,7 @@
 ;; random: contract violation
 ;;   expected: (or/c (integer-in 1 4294967087) pseudo-random-generator?)
 ;;   given: 3131203812039806
+
 (define (fast-prime? n times)
   (cond
     ((= times 0) #t)
@@ -527,6 +532,7 @@
 ;; applicative so double (expmod base (/ exp 2) m) is called
 ;; it is completely evaluated. Had the evaluation been
 ;; normal, it would have no affect by calling double.
+
 (define (charmicheal-number n)
   (define (inner-charmicheal a n)
     (if (= a n)
@@ -536,4 +542,140 @@
             false)))
   (inner-charmicheal 1 n))
 
-(map charmicheal-number (list 561 1105 1729 2465 2821 6601))
+;; (map charmicheal-number (list 561 1105 1729 2465 2821 6601))
+
+;; try to solve miller-rabin problem
+
+(define (cube-mine x)
+  (* x x x))
+
+(define (sum-integer a b)
+  (if (> a b)
+      0
+      (+ a (sum-integer (+ a 1) b))))
+
+(define (sum-cubes a b)
+  (if (> a b)
+      0
+      (+ (cube-mine a) (sum-cubes (+ a 1) b))))
+
+(define (pi-sum a b)
+  (if (> a b)
+      0
+      (+ (/ 1.0 (* a (+ a 2))) (pi-sum (+ a 4) b))))
+
+(define (sum-term term a next b)
+  (if (> a b)
+      0
+      (+ (term a)
+         (sum-term term (next a) next b))))
+
+(define (sum-cubes-abst a b)
+  (sum-term cube-mine a inc b))
+
+(define (sum-integer-abst a b)
+  (sum-term identity a inc b))
+
+(define (pi-sum-abst a b)
+  (sum-term (lambda (x) (/ 1.0 (* x (+ x 2))))
+            a
+            (lambda (x) (+ x 4))
+            b))
+
+(define (integral f a b dx)
+  (* (sum-term f
+               (+ a (/ dx 2.0))
+               (lambda (x) (+ x dx))
+               b) dx))
+
+(define (simpson-rule f a b n)
+  (define h (/ (- b a) n))
+  (define (y k)
+    (if (odd? k)
+        (* 4.0 (f (+ a (* k h))))
+        (* 2.0 (f (+ a (* k h))))))
+  (define (inner-simpson-rule cnt acc)
+    (if (>= cnt n)
+        acc
+        (inner-simpson-rule (+ cnt 1)
+                            (+ acc (y cnt)))))
+  (* (/ h 3) (inner-simpson-rule 1 (+ (f a) (f b)))))
+
+
+(define (sum-iter term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (+ result (term a)))))
+  (iter a 0))
+
+(define (integral-iter f a b dx)
+  (* (sum-iter f
+               (+ a (/ dx 2.0))
+               (lambda (x) (+ x dx))
+               b) dx))
+
+(define (product term a next b)
+  (if (> a b)
+      1
+      (* (term a)
+         (product term (next a) next b))))
+
+;; + and * can be easily abstracted by function and passing
+;; identity value. Oh next 1.32 is exactly talking about this
+
+(define (fact n)
+  (product identity 1 inc n))
+
+(define (product-iter term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (* result (term a)))))
+  (iter a 1))
+
+(define (factt n)
+  (product-iter identity 1 inc n))
+
+(define (approx-pi b)
+  (product-iter (lambda (x) (/ (* x (+ x 2.0)) (square (+ x 1)))) 2
+                (lambda (x) (+ x 2)) b))
+
+(* 4 (approx-pi 10000))
+
+;; abstact both function. recursive process
+(define (accumulate combiner null-value term a next b)
+  (if (> a b)
+      null-value
+      (combiner (term a)
+                (accumulate combiner null-value term (next a) next b))))
+
+;; iterative process
+(define (accumulate-iter combiner null-value term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (combiner result (term a)))))
+  (iter a null-value))
+
+;; ch01.rkt﻿> (accumulate + 0 identity 1 inc 10)
+;; 55
+;; ch01.rkt﻿> (accumulate-iter * 1 identity 1 inc 10)
+;; 3628800
+
+(define (filtered-accumulate predicate combiner null-value term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a)
+              (if (predicate a)
+                  (combiner result (term a))
+                  result))))
+  (iter a null-value))
+
+(define (sum-of-squares-prime a b)
+  (filtered-accumulate prime? + 0 square a inc b))
+
+(define (product-gcd n)
+  (filtered-accumulate (lambda (x) (= 1 (gcd n x)))
+                       * 1 identity 1 inc n))
