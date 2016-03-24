@@ -1,5 +1,6 @@
 #lang sicp
 (#%require math)
+;; (#%require racket/base)
 
 (+ 137 349)
 (- 1000 334)
@@ -679,3 +680,82 @@
 (define (product-gcd n)
   (filtered-accumulate (lambda (x) (= 1 (gcd n x)))
                        * 1 identity 1 inc n))
+
+;; finally let-constructs. I am using [] bracket as
+;; I am coming from racket background
+(define (f-let x y)
+  (let ([a (+ 1 (* x y))]
+        [b (- 1 y)])
+    (+ (* x (square a))
+       (* y b)
+       (* a b))))
+
+;; you can see () and [] are interchangeable
+[define [hello x y]
+  [+ x y]]
+
+(define (f-f x)
+  (let [(x 3)
+        (y (+ x 2))]
+    (* x y)))
+
+(define (fff ggg)
+  (ggg 2))
+
+;; ch01.rkt﻿> (fff (lambda (x) (fff x)))
+;; application: not a procedure;
+;;  expected a procedure that can be applied to arguments
+;;   given: 2
+;;   arguments...:
+;;    2
+
+(define (close-enough? a b)
+  (< (abs (- a b)) 0.001))
+
+;; it could have written using let* in much better way
+(define (search f neg-point pos-point)
+  (let ([mid-point (/ (+ neg-point pos-point) 2.0)])
+    (if (close-enough? neg-point pos-point)
+        mid-point
+        (let ([value-at-mid (f mid-point)])
+          (cond
+             [(positive? value-at-mid) (search f neg-point mid-point)]
+             [(negative? value-at-mid) (search f mid-point pos-point)]
+             [else mid-point])))))
+
+(define (half-interval-method f a b)
+  (let ([a-value (f a)]
+        [b-value (f b)])
+    (cond
+      [(and (negative? a-value) (positive? b-value)) (search f a b)]
+      [(and (negative? b-value) (positive? a-value)) (search f b a)]
+      [else "not found"]))) ;; some thing wrong with error
+
+(define tolerance 0.00001)
+(define (fixed-point f first-guess)
+  (define (close-enough? a b)
+    (< (abs (- a b)) tolerance))
+  (define (try guess)
+    (display guess)
+    (display " and value of function ")
+    (display (f guess))
+    (newline)
+    (let ([next (f guess)])
+      (if (close-enough? guess next)
+          next
+          (try next))))
+  (try first-guess))
+
+(define (fixpoint-sqrt x)
+  (fixed-point (lambda (y) (average y (/ x y)))
+               1.0))
+
+;; phi ^ 2 = phi + 1
+;; phi = 1 + 1 / phi
+
+(define golden-ration
+  (fixed-point (lambda (x) (average x (+ 1 (/ 1 x)))) 1.0))
+
+;;1.36
+(fixed-point (lambda (x) (average x (/ (log 1000) (log x)))) 2.0)
+(fixed-point (lambda (x) (/ (log 1000) (log x))) 2.0)
