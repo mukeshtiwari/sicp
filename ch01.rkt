@@ -753,9 +753,118 @@
 ;; phi ^ 2 = phi + 1
 ;; phi = 1 + 1 / phi
 
-(define golden-ration
+(define golden-ratio
   (fixed-point (lambda (x) (average x (+ 1 (/ 1 x)))) 1.0))
 
 ;;1.36
 (fixed-point (lambda (x) (average x (/ (log 1000) (log x)))) 2.0)
 (fixed-point (lambda (x) (/ (log 1000) (log x))) 2.0)
+
+;; recursive process
+(define (cont-frac n d k)
+  (define (iter cnt)
+    (if (= cnt k)
+        (/ (n cnt) (d cnt))
+        (/ (n cnt) (+ (d cnt) (iter (+ cnt 1))))))
+  (iter 1))
+;; iterative process
+(define (cont-frac-iter n d k)
+  (define (iter cnt result)
+    (if (= 0 cnt)
+        result
+        (iter (- cnt 1)
+              (/ (n cnt) (+ (d cnt) result)))))
+  (iter k 0))
+
+(close-enough? (cont-frac-iter (lambda (i) 1.0) (lambda (i) 1.0) 1000)
+               (/ 1 golden-ratio))
+
+(define (euler-constant k)
+  (+ 2.0 (cont-frac-iter (lambda (n) 1.0)
+                         (lambda (n)
+                           (if (= 2 (remainder n 3))
+                               (* 2 (/ (+ n 1) 3)) 1)) k)))
+
+(define (tanx x k)
+  (cont-frac-iter (lambda (n)
+                    (if (= 1 n)
+                        x
+                        (- (* x x))))
+                  (lambda (n) (- (* 2 n) 1)) k))
+
+(define (average-damp f)
+  (lambda (x) (average x (f x))))
+
+(define (sqrt-damp x)
+  (fixed-point (average-damp (lambda (y) (/ x y)))
+               1.0))
+
+(define (cube-root-damp x)
+  (fixed-point (average-damp (lambda (y) (/ x (square y))))
+               1.0))
+
+(define dx 0.00001)
+(define (deriv g)
+  (lambda (x)
+      (/ (- (g (+ x dx)) (g x)))))
+
+(define (newton-transform g)
+  (lambda (x)
+    (- x (/ (g x) ((deriv g) x)))))
+
+(define (newtons-method f guess)
+  (fixed-point (newton-transform f) guess))
+
+;; conversing very slowly.
+;; (sqrt-newton 5) => 4.989984432763297
+;; x - x
+(define (sqrt-newton x)
+  (newtons-method (lambda (y) (- (square y) x))
+                  1.0))
+
+(define (cubic a b c)
+  (lambda (x)
+    (+ (* x x x)
+       (* a x x)
+       (* b x)
+       c)))
+
+(define (double f)
+  (lambda (x) (f (f x))))
+
+(((double (double double)) inc) 5)
+
+(define (compose f g)
+  (lambda (x) (f (g x))))
+
+(define (repeat f n)
+  (if (= n 1)
+      f
+      (compose f (repeat f (- n 1)))))
+
+(define (smooth f)
+  (lambda (x)
+    (/ (+ (f (- x dx)) (f x) (f (+ x dx))) 3.0)))
+
+(define (n-fold-smooth f n)
+  ((repeat smooth n) f))
+
+(define (nth-root-damp x n)
+  (fixed-point ((repeat average-damp (/ (log x) (log 2)))
+             (lambda (y) (/ x (expt y (- n 1)))))
+               1.0))
+
+(define (iterative-improve next-guess-fun good-enough-fun)
+  (lambda (guess)
+    (if (good-enough-fun guess (next-guess-fun guess))
+        guess
+        ((iterative-improve next-guess-fun good-enough-fun)
+         (next-guess-fun guess)))))
+
+(define (sqrt-iterative-improve x)
+  ((iterative-improve
+    (lambda (y) (average y (/ x y)))
+    close-enough?) 1.0))
+
+(define (fixed-point-iterative f first-guess)
+  ((iterative-improve f close-enough?) first-guess))
